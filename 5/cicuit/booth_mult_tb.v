@@ -1,21 +1,18 @@
 `timescale 1ns/1ps
 module booth_mult_tb;
-
-    parameter N = 8; 
-
-    reg clk;
-    reg rst;
-    reg signed [N-1:0] M;
-    reg signed [N-1:0] Q;
+    parameter N = 4, LOGN = 2; 
+    reg clk, reset;
+    reg signed [N-1:0] M, Q;
     wire done;
     wire signed [2*N-1:0] product;
 
-    booth_mult #(.N(N)) uut (clk, rst, M, Q, done, product);
+    booth_mult #(N, LOGN) multt (clk, reset, M, Q, done, product);
 
     initial clk = 0;
     always #5 clk = ~clk;
 
     integer a,b;
+    integer exp;
     integer errors;
     reg [31:0] cycles;
 
@@ -24,35 +21,34 @@ module booth_mult_tb;
   		$dumpvars(0, booth_mult_tb);
 
         errors = 0;
-        rst = 0; 
+        reset = 0; 
         #20;
-        rst = 1;
-        #10;
 
-        for (a = -100; a < 150; a = a + 100) begin
-            for (b = -100; b < 150; b = b + 100) begin
+        for (a = -6; a < 6; a = a + 5) begin
+            for (b = -5; b < 6; b = b + 5) begin
+                exp = a*b;
                 M = a;
                 Q = b;
                 cycles = 0;
+                #20;
+                reset = 1;
                 while (!done && cycles < 1000) begin
                     @(posedge clk);
                     cycles = cycles + 1;
                 end
 
                 if (!done) begin
-                    $display("TIMEOUT M=%0d Q=%0d", $signed(M), $signed(Q));
+                    $display("TIMEOUT M=%0d Q=%0d", M, Q);
                     errors = errors + 1;
                 end else begin
                     @(posedge clk);
-                    if (product !== (M * Q)) begin
-                        $display("ERROR M=%0d Q=%0d got=%0d exp=%0d", M, Q, product, M*Q);
+                    if (product !== exp) begin
+                        $display("ERROR M=%0d Q=%0d got=%0d exp=%0d", M, Q, product, exp);
                         errors = errors + 1;
                     end
-                    
                 end
-                rst = 0;
-                @(posedge clk);
-                rst = 1;
+
+                reset = 0;
             end
         end
 

@@ -8,10 +8,10 @@ module control_unit
 );
 
     reg [LOGN:0] total_shift;
-    find_first_different_bit finder (Q, shamt_this_clk);
+    find_first_different_bit #(N, LOGN) finder (Q, shamt_this_clk);
 
     assign operation_select = Q[0];
-    assign done = (total_shift >= N);
+    assign done = (total_shift >= N-shamt_this_clk);
 
     always @(posedge clk, negedge start) begin
         if (~start) 

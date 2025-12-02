@@ -7,22 +7,22 @@ module datapath #(parameter N = 8, LOGN = 3)(
 );
 
     // Internal datapath regs
-    reg signed [N-1:0] A; // accumulator
-    reg signed [2*N:0] update;
+    reg signed [2*N:0] update_plus;
+    reg signed [2*N:0] update_min;
 
     always @(posedge clk, negedge reset) begin
         if (~reset) begin
-            A <= 0;
             result <= 0;
-            operator <= {A, Q, 1'b0};
-            update <= (M << (N+1));
+            operator <= {{N{1'b0}}, Q, 1'b0};
+            update_plus <= {M, {(N+1){1'b0}}};
+            update_min <= {(-M), {(N+1){1'b0}}};
         end else if (~done) begin
-            operator = operator >>> shamt_this_clk;
             if (operation_select) begin
-                operator <= operator + update;
+                operator <= operator + update_plus;
             end else begin
-                operator <= operator - update;
+                operator <= operator + update_min;
             end
+            operator = operator >>> shamt_this_clk;
         end else begin
             result <= operator[2*N:1];
         end
