@@ -7,7 +7,7 @@ module booth_mult #(parameter N = 8, LOGN = 3)
 );
 
     wire [2*N:0] operator;
-    wire operation_select;
+    wire [1:0] operation_select;
     wire [LOGN:0] shamt_this_clk;
 
     control_unit #(N, LOGN) cu (clk, reset, operator, operation_select, done, shamt_this_clk);
