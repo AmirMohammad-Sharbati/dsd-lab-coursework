@@ -6,7 +6,7 @@ module booth_mult #(parameter N = 8, LOGN = 3)
     output signed [2*N-1:0] result
 );
 
-    wire [2*N:0] operator;
+    wire [2*N+1:0] operator;
     wire [1:0] operation_select;
     wire [LOGN:0] shamt_this_clk;
 

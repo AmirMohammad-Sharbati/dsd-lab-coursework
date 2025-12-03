@@ -2,7 +2,7 @@ module control_unit
 # (parameter N = 8, LOGN = 3)
 (    
     input clk, reset,
-    input [2*N:0] Q, // multiplier which which we shift it 
+    input [2*N+1:0] Q, // multiplier which which we shift it 
     output [1:0] operation_select, 
     output done,
     output reg [LOGN:0] shamt_this_clk
