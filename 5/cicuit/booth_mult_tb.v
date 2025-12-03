@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 module booth_mult_tb;
-    parameter N = 4, LOGN = 2; 
+    parameter N = 16, LOGN = 4; 
     reg clk, reset;
     reg signed [N-1:0] M, Q;
     wire done;
@@ -11,9 +11,7 @@ module booth_mult_tb;
     initial clk = 0;
     always #5 clk = ~clk;
 
-    integer a,b;
-    integer exp;
-    integer errors;
+    integer a, b, exp, errors;
     reg [31:0] cycles;
 
     initial begin
@@ -52,7 +50,7 @@ module booth_mult_tb;
             end
         end
 
-        if (errors == 0) $display("All exhaustive tests passed for N=%0d", N);
+        if (errors == 0) $display("------------------ Fortunately, all tests passed for N=%0d ------------------", N);
         else $display("Errors: %0d", errors);
 
         $finish;

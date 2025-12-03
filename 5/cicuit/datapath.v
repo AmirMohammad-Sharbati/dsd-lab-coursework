@@ -10,8 +10,8 @@ module datapath #(parameter N = 8, LOGN = 3)(
 
     always @(posedge clk, negedge reset) begin
         if (~reset) begin
-            Acc <= {{N{M[3]}}, M};
-            operator <= {{N{Q[3]}}, Q};
+            Acc <= {{N{M[N-1]}}, M};
+            operator <= Q;
             result <= 0;
         end else if (~done) begin
             operator <= operator >> shift_b;

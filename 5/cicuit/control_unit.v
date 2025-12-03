@@ -12,13 +12,13 @@ module control_unit
     reg [LOGN:0] total_shift;
     reg start;
     
-
     find_first_different_bit #(N, LOGN) finder (Q, index0, index1);
-    assign shift_a = total_shift + shift_b;
-    assign shift_b = operation_select ? index0 : index1;
 
-    assign operation_select = start & Q[0];
     assign done = shift_a >= N;
+    assign operation_select = start & Q[0];
+
+    assign shift_b = operation_select ? index0 : index1;
+    assign shift_a = total_shift + shift_b;
 
     always @(posedge clk, negedge reset) begin
         if (~reset) begin
