@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 module booth_mult_tb;
-    parameter N = 16, LOGN = 4; 
+    parameter N = 8, LOGN = 3; 
     reg clk, reset;
     reg signed [N-1:0] M, Q;
     wire done;
@@ -13,6 +13,10 @@ module booth_mult_tb;
 
     integer a, b, exp, errors;
     reg [31:0] cycles;
+    reg [2*N:0] counter;
+
+    localparam signed MAX_NUM =  (1 <<< (N-1)) - 1;
+    localparam signed MIN_NUM = -(1 <<< (N-1));
 
     initial begin
         $dumpfile("booth_mult.vcd");
@@ -20,14 +24,16 @@ module booth_mult_tb;
 
         errors = 0;
         reset = 0; 
+        counter = 0;
         #20;
 
-        for (a = -8; a < 8; a = a + 1) begin
-            for (b = -8; b < 8; b = b + 1) begin
+        for (a = MIN_NUM; a <= MAX_NUM; a = a + 1) begin
+            for (b = MIN_NUM; b <= MAX_NUM; b = b + 1) begin
                 exp = a*b;
                 M = a;
                 Q = b;
                 cycles = 0;
+                counter = counter + 1;
                 #20;
                 reset = 1;
                 while (!done && cycles < 1000) begin
@@ -50,7 +56,7 @@ module booth_mult_tb;
             end
         end
 
-        if (errors == 0) $display("------------------ Fortunately, all tests passed for N=%0d ------------------", N);
+        if (errors == 0) $display("------------------ Fortunately, all tests (%0d) passed for N=%0d ------------------", counter, N);
         else $display("Errors: %0d", errors);
 
         $finish;
