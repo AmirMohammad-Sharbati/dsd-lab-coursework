@@ -1,37 +1,26 @@
 module datapath #(parameter N = 8, LOGN = 3)(
-    input clk, reset, done, 
-    input [1:0] operation_select, 
+    input clk, reset, done, operation_select, 
     input [N-1:0] M, Q, // M is multiplicand and Q is multiplier
-    input [LOGN:0] shamt_this_clk,
-    output reg signed [2*N-1:0] result, 
-    output reg signed [2*N+1:0] operator
+    input [LOGN:0] shift_a, shift_b,
+    output reg [2*N-1:0] result, 
+    output reg [N-1:0] operator
 );
 
-    // Internal datapath regs
-    reg signed [2*N+1:0] update_plus;
-    reg signed [2*N+1:0] update_min;
-    wire signed [N:0] M_temp = {{M[N-1]}, M};
-    wire signed [N:0] M_min = -M_temp;
+    reg [2*N-1:0] Acc;
 
     always @(posedge clk, negedge reset) begin
         if (~reset) begin
+            Acc <= {{N{M[3]}}, M};
+            operator <= {{N{Q[3]}}, Q};
             result <= 0;
-            operator <= {{(N+1){1'b0}}, Q, 1'b0};
-            update_plus <= {M_temp, {(N+1){1'b0}}};
-            update_min <= {(M_min), {(N+1){1'b0}}};
         end else if (~done) begin
-            operator = operator >>> shamt_this_clk;
-
-            if (operation_select == 2'b01) begin
-                operator = operator + update_plus;
-            end else if (operation_select == 2'b10) begin
-                operator = operator + update_min;
+            operator <= operator >> shift_b;
+            if (operation_select) begin
+                result <= result + (Acc << shift_a);
+            end else begin
+                result <= result - (Acc << shift_a);
             end
-            operator = operator >>> 1;
-        end else begin
-            result <= operator[2*N:1];
         end
     end
-
     
 endmodule

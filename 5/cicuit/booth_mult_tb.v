@@ -24,8 +24,8 @@ module booth_mult_tb;
         reset = 0; 
         #20;
 
-        for (a = -8; a < 7; a = a + 1) begin
-            for (b = -8; b < 7; b = b + 1) begin
+        for (a = -8; a < 8; a = a + 1) begin
+            for (b = -8; b < 8; b = b + 1) begin
                 exp = a*b;
                 M = a;
                 Q = b;
