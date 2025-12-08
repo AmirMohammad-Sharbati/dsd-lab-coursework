@@ -35,9 +35,7 @@ module datapath #(parameter N = 8, LOGN = 3)(
             sub_count <= 0;
             clk_count <= 0;
             is_added <= 0;
-		end
-        
-        else if (~done) begin
+		end else if (~done) begin
             operator <= operator >> shift_b;
             clk_count <= clk_count + 1;
             if (operation_select) begin
@@ -47,9 +45,7 @@ module datapath #(parameter N = 8, LOGN = 3)(
                 result <= result - (Acc << shift_a);
                 sub_count <= sub_count + 1;
             end
-        end
-        
-        else if (done) begin
+        end else if (done) begin
 			total <= total + result;
             is_added <= 1;
 		end
