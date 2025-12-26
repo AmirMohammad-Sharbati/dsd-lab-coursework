@@ -1,74 +1,141 @@
-module complex_number_ALU (
-    input clk, resetNot, start,
-    input [4:0] pc
+module complex_number_ALU(
+    input clk, rst
 );
 
-    // Pipeline registers
-    reg [31:0] instr_fetch;
-    reg [31:0] instr_decode;
-    reg [4:0] mem_address;
-    wire[31:0] instruction;
+    reg [4:0] pc;
 
-    // Instruction fields
+    // pipeline registers
+    reg [31:0] IF_instr;
+    reg [31:0] ID_instr;
+
+    // Decode fields
     reg [3:0] opcode;
+    reg [4:0] srcA_addr, srcB_addr, dst_addr;
 
-    // Example operands
-    reg signed [15:0] a_real, a_imag, b_real, b_imag;
+    
+    // Operands & results  
+    reg  [31:0] opA, opB;
+    wire [31:0] addsub_result;
+    wire [31:0] mul_result;
 
-    wire signed [15:0] add_real, add_imag;
-    wire signed [31:0] mul_real, mul_imag;
-    wire done;
+    reg start_addsub, start_mul;
+    wire done_addsub, done_mul;
 
-    // Instruction memory
-    memory mem (clk, mem_address, instruction);
-    input clk, 
-    input write_enable, read_enable,
-    input [4:0] address,
-    input [31:0] write_data,
-    output reg [31:0] read_data  
+    reg [31:0] result;
+    reg busy;   // stall control
 
-    // Adder/Subtractor
-    complex_add_sub ADDER (
-        .a_real(a_real),
-        .a_imag(a_imag),
-        .b_real(b_real),
-        .b_imag(b_imag),
-        .op(opcode[0]),
-        .y_real(add_real),
-        .y_imag(add_imag)
+    // memory control
+    reg mem_we, mem_re;
+    reg [4:0] mem_addr;
+    reg [31:0] mem_wdata;
+    wire [31:0] mem_rdata;
+
+    
+    memory MEM (
+        .clk(clk),
+        .write_enable(mem_we),
+        .read_enable(mem_re),
+        .address(mem_addr),
+        .write_data(mem_wdata),
+        .read_data(mem_rdata)
     );
 
-    // Multiplier
+    
+    complex_add_sub ADD_SUB (
+        .clk(clk),
+        .rst(rst),
+        .start(start_addsub),
+        .op(opcode[0]),
+        .A(opA),
+        .B(opB),
+        .Y(addsub_result),
+        .done(done_addsub)
+    );
+
+    
     complex_mul MUL (
         .clk(clk),
         .rst(rst),
-        .start(opcode == 4'b0010),
-        .a_real(a_real),
-        .a_imag(a_imag),
-        .b_real(b_real),
-        .b_imag(b_imag),
-        .y_real(mul_real),
-        .y_imag(mul_imag),
-        .done(mul_done)
+        .start(start_mul),
+        .A(opA),
+        .B(opB),
+        .Y(mul_result),
+        .done(done_mul)
     );
 
+    
     always @(posedge clk or posedge rst) begin
         if (rst) begin
-            pc <= 0;
+            pc           <= 0;
+            busy         <= 0;
+            start_addsub <= 0;
+            start_mul    <= 0;
         end else begin
-            pc <= pc + 1;
 
-            // IF → ID
-            instr_ID <= instr_IF;
+            /* ========= IF STAGE ========= */
+            if (!busy) begin
+                mem_addr <= pc;
+                mem_re   <= 1'b1;
+                IF_instr <= mem_rdata;
+                pc       <= pc + 1;
+            end
 
-            // Decode
-            opcode <= instr_ID[31:28];
+            /* ========= ID STAGE ========= */
+            if (!busy) begin
+                ID_instr  <= IF_instr;
+                opcode    <= IF_instr[31:28];
+                srcA_addr <= IF_instr[27:23];
+                srcB_addr <= IF_instr[22:18];
+                dst_addr  <= IF_instr[17:13];
 
-            // Example fixed operands (replace with register file later)
-            a_real <= 16'd3;
-            a_imag <= 16'd2;
-            b_real <= 16'd1;
-            b_imag <= 16'd4;
+                // read operand A
+                mem_addr <= srcA_addr;
+                mem_re   <= 1'b1;
+                opA      <= mem_rdata;
+
+                // read operand B
+                mem_addr <= srcB_addr;
+                mem_re   <= 1'b1;
+                opB      <= mem_rdata;
+            end
+
+            /* ========= EX STAGE ========= */
+            if (!busy) begin
+                case (opcode)
+                    4'b0000, 4'b0001: begin // ADD or SUB
+                        start_addsub <= 1'b1;
+                        busy         <= 1'b1;
+                    end
+                    4'b0010: begin          // MUL
+                        start_mul <= 1'b1;
+                        busy      <= 1'b1;
+                    end
+                endcase
+            end
+
+            /* ========= WAIT FOR DONE ========= */
+            if (busy) begin
+                if (done_addsub) begin
+                    result       <= addsub_result;
+                    start_addsub <= 1'b0;
+                    busy         <= 1'b0;
+                end
+                else if (done_mul) begin
+                    result    <= mul_result;
+                    start_mul <= 1'b0;
+                    busy      <= 1'b0;
+                end
+            end
+
+            /* ========= WB STAGE ========= */
+            if (!busy && (done_addsub || done_mul)) begin
+                mem_addr  <= dst_addr;
+                mem_wdata <= result;
+                mem_we    <= 1'b1;
+            end else begin
+                mem_we <= 1'b0;
+            end
+
         end
     end
 
