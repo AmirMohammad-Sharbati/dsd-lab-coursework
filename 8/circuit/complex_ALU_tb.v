@@ -22,6 +22,7 @@ module complex_ALU_tb;
 
         // Reset
         #20 rstN = 0;
+        #20 rstN = 1;
 
         // Initialize memory manually
         // Complex numbers: [31:16]=real, [15:0]=imag
@@ -41,18 +42,19 @@ module complex_ALU_tb;
 
         // Let simulation run
         wait (done) begin
-           $display("ADD result = %d + j%d",
+           $display("ADD result = %0d + %0dj",
                 DUT.MEM.mem[3][31:16],
                 DUT.MEM.mem[3][15:0]);
         end
 
         
-
-        $display("MUL result = %d + j%d",
+        wait (done) begin 
+        $display("MUL result = %0d + %0dj",
             DUT.MEM.mem[4][31:16],
             DUT.MEM.mem[4][15:0]);
+        end
 
-        $stop;
+        $finish;
     end
 
 endmodule

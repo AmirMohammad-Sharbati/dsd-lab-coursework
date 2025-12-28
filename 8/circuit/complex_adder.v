@@ -6,7 +6,7 @@ module complex_adder (
     output reg done
 );
 
-    reg state;   // 0 = real, 1 = imag
+    reg [1:0] state;   // 0 = real, 1 = imag
 
     reg signed [15:0] add_a, add_b;
 
@@ -16,7 +16,7 @@ module complex_adder (
     wire signed [15:0] b_imag = B[15:0];
 
 
-    wire signed [15:0] add_out = op ? (add_a - add_b) : add_a - add_b;
+    wire signed [15:0] add_out = op ? (add_a - add_b) : add_a + add_b;
 
     always @(posedge clk, negedge resetNot) begin
         if (!resetNot) begin
@@ -28,15 +28,20 @@ module complex_adder (
                     if (start) begin
                         add_a <= a_real;
                         add_b <= b_real;
-                        result[15:0] <= add_out;
+                        
                         state <= 1'b1;
                     end
                 end
 
                 1'b1: begin  // IMAG PART
+                    result[31:16] <= add_out; // This is real result (previous state)
                     add_a <= a_imag;
                     add_b <= b_imag;
-                    result[31:16] <= add_out;
+                    state <= 2'd2;
+                end
+
+                2'd2: begin
+                    result[15:0] <= add_out;
                     done <= 1'b1;
                     state <= 1'b0;
                 end
