@@ -18,40 +18,49 @@ module complex_ALU_tb;
         $dumpvars(0, complex_ALU_tb);
 
         clk = 0;
-        rstN = 1;
-
         // Reset
-        #20 rstN = 0;
+        rstN = 0;
         #20 rstN = 1;
 
         // Initialize memory manually
         // Complex numbers: [31:16]=real, [15:0]=imag
 
-        // Operand A = 3 + j2
-        DUT.MEM.mem[1] = {16'd3, 16'd2};
+        // Operand A = 3 + 2i
+        DUT.MEM.mem[16] = {16'd3, 16'd2};
 
-        // Operand B = 1 + j4
-        DUT.MEM.mem[2] = {16'd1, 16'd4};
+        // Operand B = 1 + 4i
+        DUT.MEM.mem[17] = {16'd1, 16'd4};
 
-        // Instruction: ADD  mem[1] + mem[2] → mem[3]
-        // opcode=0000
-        DUT.MEM.mem[0] = {4'b0000, 5'd1, 5'd2, 5'd3, 13'd0};
+        // Instruction: ADD:  mem[16] + mem[17] -> mem[3]
+        DUT.MEM.mem[0] = {4'b0000, 5'd16, 5'd17, 5'd3, 13'd0};
 
-        // Instruction: MUL mem[1] * mem[2] → mem[4]
-        DUT.MEM.mem[5] = {4'b0010, 5'd1, 5'd2, 5'd4, 13'd0};
+        // Instruction: MUL: mem[16] * mem[17] -> mem[4]
+        DUT.MEM.mem[1] = {4'b0010, 5'd16, 5'd17, 5'd4, 13'd0};
+
+        // Instruction: SUB: mem[16] - mem[17] -> mem[6]
+        DUT.MEM.mem[2] = {4'b0001, 5'd16, 5'd17, 5'd6, 13'd0};
 
         // Let simulation run
         wait (done) begin
-           $display("ADD result = %0d + %0dj",
-                DUT.MEM.mem[3][31:16],
-                DUT.MEM.mem[3][15:0]);
+           $display("ADD result = %0d + %0di",
+                $signed(DUT.MEM.mem[3][31:16]),
+                $signed(DUT.MEM.mem[3][15:0]));
         end
 
-        
+        #100;
+
         wait (done) begin 
-        $display("MUL result = %0d + %0dj",
-            DUT.MEM.mem[4][31:16],
-            DUT.MEM.mem[4][15:0]);
+            $display("MUL result = %0d + %0di",
+                $signed(DUT.MEM.mem[5][31:0]),
+                $signed(DUT.MEM.mem[4][31:0]));
+        end
+
+        #100;
+
+        wait (done) begin 
+            $display("SUB result = %0d + %0di",
+                $signed(DUT.MEM.mem[6][31:16]),
+                $signed(DUT.MEM.mem[6][15:0]));
         end
 
         $finish;

@@ -12,7 +12,8 @@ module complex_mult (
 
     // FSM states
     reg [2:0] state;
-    localparam IDLE = 3'd0, AC = 3'd1, BD = 3'd2, AD = 3'd3, BC = 3'd4, DONE = 3'd5;
+    localparam IDLE = 3'd0, AC = 3'd1, BD = 3'd2, AD = 3'd3, BC = 3'd4, 
+                WRITE = 3'd5, DONE = 3'd6;
 
     // Internal registers
     reg signed [31:0] ac, bd, ad, bc;
@@ -27,37 +28,34 @@ module complex_mult (
         end else begin
             case (state)
                 IDLE: begin
-                    done <= 1'b0;
-                    if (start)
+                    done <= 1'b0;    
+                    if (start) begin 
                         state <= AC;
+                    end
                 end
 
                 AC: begin
-                    mul_a <= a_real;
-                    mul_b <= b_real;
-                    ac <= mul_out;
+                    ac <= a_real * b_real;
                     state <= BD;
                 end
 
                 BD: begin
-                    mul_a <= a_imag;
-                    mul_b <= b_imag;
-                    bd <= mul_out;
+                    bd <= a_imag * b_imag;
                     state <= AD;
                 end
 
                 AD: begin
-                    result[63:32] <= ac - bd; // We can calculate the real part here to avoid using two adders in one clock
-                    mul_a <= a_real;
-                    mul_b <= b_imag;
-                    ad <= mul_out;
+                    ad <= a_real * b_imag;
                     state <= BC;
                 end
 
                 BC: begin
-                    mul_a <= a_imag;
-                    mul_b <= b_real;
-                    bc <= mul_out;
+                    result[63:32] <= ac - bd;
+                    bc <= a_imag * b_real;
+                    state <= WRITE;
+                end
+
+                WRITE: begin
                     state <= DONE;
                 end
 

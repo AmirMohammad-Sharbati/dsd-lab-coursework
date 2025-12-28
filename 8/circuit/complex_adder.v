@@ -25,10 +25,11 @@ module complex_adder (
         end else begin
             case (state)
                 1'b0: begin  // REAL PART
+                    done <= 1'b0;
                     if (start) begin
+                        
                         add_a <= a_real;
                         add_b <= b_real;
-                        
                         state <= 1'b1;
                     end
                 end
