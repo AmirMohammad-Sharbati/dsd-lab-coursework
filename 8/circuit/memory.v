@@ -6,7 +6,7 @@ module memory (
     output reg [31:0] read_data  
 );
 
-    reg [31:0] mem [0:31]; // 2^16 words, each 16-bit
+    reg [31:0] mem [0:31]; // 32 words, each 32-bit
 
     always @(posedge clk) begin
         if (write_enable) 

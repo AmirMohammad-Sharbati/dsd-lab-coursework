@@ -2,8 +2,8 @@ module complex_adder (
     input clk, resetNot, start,
     input [31:0] A, B,
     input op, // 0 = add, 1 = sub
-    output reg [31:0] result
-    output reg done,
+    output reg [31:0] result,
+    output reg done
 );
 
     reg state;   // 0 = real, 1 = imag

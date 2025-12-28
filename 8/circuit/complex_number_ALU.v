@@ -1,5 +1,6 @@
 module complex_number_ALU(
-    input clk, rst
+    input clk, rstN,
+    output reg done
 );
 
     reg [4:0] pc;
@@ -16,16 +17,15 @@ module complex_number_ALU(
     // Operands & results  
     reg  [31:0] opA, opB;
     wire [31:0] addsub_result;
-    wire [31:0] mul_result;
+    wire [63:0] mul_result;
 
     reg start_addsub, start_mul;
     wire done_addsub, done_mul;
 
-    reg [31:0] result;
     reg busy;   // stall control
 
     // memory control
-    reg mem_we, mem_re;
+    reg mem_wr, mem_re;
     reg [4:0] mem_addr;
     reg [31:0] mem_wdata;
     wire [31:0] mem_rdata;
@@ -33,7 +33,7 @@ module complex_number_ALU(
     
     memory MEM (
         .clk(clk),
-        .write_enable(mem_we),
+        .write_enable(mem_wr),
         .read_enable(mem_re),
         .address(mem_addr),
         .write_data(mem_wdata),
@@ -41,43 +41,37 @@ module complex_number_ALU(
     );
 
     
-    complex_add_sub ADD_SUB (
-        .clk(clk),
-        .rst(rst),
-        .start(start_addsub),
+    complex_adder ADD_SUB (
+        .clk(clk), .resetNot(rstN), .start(start_addsub),
+        .A(opA), .B(opB),
         .op(opcode[0]),
-        .A(opA),
-        .B(opB),
-        .Y(addsub_result),
+        .result(addsub_result),
         .done(done_addsub)
     );
 
     
-    complex_mul MUL (
-        .clk(clk),
-        .rst(rst),
-        .start(start_mul),
-        .A(opA),
-        .B(opB),
-        .Y(mul_result),
+    complex_mult MUL (
+        .clk(clk), .resetNot(rstN), .start(start_mul),
+        .A(opA), .B(opB),
+        .result (mul_result),
         .done(done_mul)
     );
 
     
-    always @(posedge clk or posedge rst) begin
-        if (rst) begin
-            pc           <= 0;
-            busy         <= 0;
+    always @(posedge clk or negedge rstN) begin
+        if (!rstN) begin
+            pc <= 0;
+            busy <= 0;
             start_addsub <= 0;
-            start_mul    <= 0;
+            start_mul <= 0;
         end else begin
 
             /* ========= IF STAGE ========= */
             if (!busy) begin
                 mem_addr <= pc;
-                mem_re   <= 1'b1;
+                mem_re <= 1'b1;
                 IF_instr <= mem_rdata;
-                pc       <= pc + 1;
+                pc <= pc + 1;
             end
 
             /* ========= ID STAGE ========= */
@@ -90,21 +84,21 @@ module complex_number_ALU(
 
                 // read operand A
                 mem_addr <= srcA_addr;
-                mem_re   <= 1'b1;
-                opA      <= mem_rdata;
+                mem_re <= 1'b1;
+                opA <= mem_rdata;
 
                 // read operand B
                 mem_addr <= srcB_addr;
-                mem_re   <= 1'b1;
-                opB      <= mem_rdata;
+                mem_re <= 1'b1;
+                opB <= mem_rdata;
             end
 
-            /* ========= EX STAGE ========= */
+            // Execution step (EX)
             if (!busy) begin
                 case (opcode)
                     4'b0000, 4'b0001: begin // ADD or SUB
                         start_addsub <= 1'b1;
-                        busy         <= 1'b1;
+                        busy <= 1'b1;
                     end
                     4'b0010: begin          // MUL
                         start_mul <= 1'b1;
@@ -113,27 +107,33 @@ module complex_number_ALU(
                 endcase
             end
 
-            /* ========= WAIT FOR DONE ========= */
+            // Wait for done
             if (busy) begin
                 if (done_addsub) begin
-                    result       <= addsub_result;
                     start_addsub <= 1'b0;
-                    busy         <= 1'b0;
+                    busy <= 1'b0;
                 end
                 else if (done_mul) begin
-                    result    <= mul_result;
                     start_mul <= 1'b0;
-                    busy      <= 1'b0;
+                    busy <= 1'b0;
                 end
             end
 
-            /* ========= WB STAGE ========= */
-            if (!busy && (done_addsub || done_mul)) begin
-                mem_addr  <= dst_addr;
-                mem_wdata <= result;
-                mem_we    <= 1'b1;
+            // write back stage
+            if (!busy && done_addsub) begin
+                mem_addr <= dst_addr;
+                mem_wdata <= addsub_result;
+                mem_wr <= 1'b1;
+                done <= 1;
+            end else if (!busy && done_mul) begin
+                mem_addr <= dst_addr;
+                mem_wdata <= mul_result[31:0];
+                mem_addr <= dst_addr + 1;
+                mem_wdata <= mul_result[63:32];
+                mem_wr <= 1'b1;
+                done <= 1;
             end else begin
-                mem_we <= 1'b0;
+                mem_wr <= 1'b0;
             end
 
         end

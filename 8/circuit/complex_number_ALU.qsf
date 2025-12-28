@@ -49,3 +49,4 @@ set_global_assignment -name VERILOG_FILE complex_mult.v
 set_global_assignment -name VERILOG_FILE complex_adder.v
 set_global_assignment -name VERILOG_FILE complex_number_ALU.v
 set_global_assignment -name VERILOG_FILE memory.v
+set_global_assignment -name VERILOG_FILE complex_ALU_tb.v
