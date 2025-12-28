@@ -91,7 +91,7 @@ module complex_number_ALU(
                     state <= FETCH_WAIT_1;
                 end
 
-                FETCH_WAIT_1: begin // Delay one clock cycle for reading from memory (This is also used for load instruction)
+                FETCH_WAIT_1: begin // Delay one clock cycle for reading from memory 
                     state <= FETCH_WAIT_2;
                 end
 

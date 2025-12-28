@@ -13,13 +13,10 @@ module complex_mult (
     // FSM states
     reg [2:0] state;
     localparam IDLE = 3'd0, AC = 3'd1, BD = 3'd2, AD = 3'd3, BC = 3'd4, 
-                WRITE = 3'd5, DONE = 3'd6;
+                WAIT = 3'd5, DONE = 3'd6;
 
     // Internal registers
     reg signed [31:0] ac, bd, ad, bc;
-    reg signed [15:0] mul_a, mul_b;
-    wire signed [31:0] mul_out = mul_a * mul_b;
-
 
     always @(posedge clk or negedge resetNot) begin
         if (!resetNot) begin
@@ -52,10 +49,10 @@ module complex_mult (
                 BC: begin
                     result[63:32] <= ac - bd;
                     bc <= a_imag * b_real;
-                    state <= WRITE;
+                    state <= WAIT;
                 end
 
-                WRITE: begin
+                WAIT: begin
                     state <= DONE;
                 end
 
