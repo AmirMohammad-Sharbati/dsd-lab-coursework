@@ -1,122 +1,151 @@
-`timescale 1ns/1ps
-
 module tcam_tb;
 
     // Parameters
-    localparam int WIDTH = 16;
-    localparam int DEPTH = 16;
+    parameter WIDTH = 16;
+    parameter DEPTH = 16;
+    parameter ADDR_WIDTH = 4;
 
     // DUT signals
-    reg  [WIDTH-1:0] search_data;
-    reg  [WIDTH-1:0] value [DEPTH-1:0];
-    reg  [WIDTH-1:0] mask  [DEPTH-1:0];
+    reg clk, write_enable, reset;
+    reg [ADDR_WIDTH-1:0] write_addr;
+    reg [WIDTH-1:0] write_value;
+    reg [WIDTH-1:0] write_mask;
+    reg [WIDTH-1:0] search_data;
     wire [DEPTH-1:0] match;
 
-    // Reference model result
-    reg  [DEPTH-1:0] expected_match;
+    // Reference model storage
+    reg [WIDTH-1:0] ref_value [0:DEPTH-1];
+    reg [WIDTH-1:0] ref_mask  [0:DEPTH-1];
+
+    reg [DEPTH-1:0] expected_match;
 
     integer i, b, test;
 
     // Instantiate DUT
     tcam #(
         .WIDTH(WIDTH),
-        .DEPTH(DEPTH)
+        .DEPTH(DEPTH),
+        .ADDR_WIDTH(ADDR_WIDTH)
     ) dut (
+        .clk(clk),
+        .reset(reset),
+        .write_enable(write_enable),
+        .write_addr(write_addr),
+        .write_value(write_value),
+        .write_mask(write_mask),
         .search_data(search_data),
-        .value(value),
-        .mask(mask),
         .match(match)
     );
 
-    // --------------------------------------------------
-    // Reference TCAM model (golden model)
-    // --------------------------------------------------
-    task compute_expected;
+    // Clock generation
+    initial clk = 0;
+    always #5 clk = ~clk;
+    reg error_flag;
+
+
+    task write_entry;
+        input [ADDR_WIDTH-1:0] addr;
+        input [WIDTH-1:0] value;
+        input [WIDTH-1:0] mask;
         begin
-            for (i = 0; i < DEPTH; i = i + 1) begin
-                expected_match[i] = 1'b1;
-                for (b = 0; b < WIDTH; b = b + 1) begin
-                    if (mask[i][b] == 1'b0 && search_data[b] != value[i][b])
-                        expected_match[i] = 1'b0;
+            @(posedge clk);
+            write_enable = 1'b1;
+            write_addr = addr;
+            write_value = value;
+            write_mask = mask;
+            #1; // small delay to ensure write occurs
+            // update reference model
+            ref_value[addr] = value;
+            ref_mask [addr] = mask;
+
+            @(posedge clk);
+            write_enable = 1'b0;
+        end
+    endtask
+
+    function [DEPTH-1:0] compute_match;
+        input [WIDTH-1:0] key;
+        integer r, c;
+        begin
+            for (r = 0; r < DEPTH; r = r + 1) begin
+                compute_match[r] = 1'b1;
+                for (c = 0; c < WIDTH; c = c + 1) begin
+                    if (ref_mask[r][c] == 1'b0 &&
+                        key[c] != ref_value[r][c])
+                        compute_match[r] = 1'b0;
                 end
+            end
+        end
+    endfunction
+
+
+    task check_search;
+        input [WIDTH-1:0] key;
+        begin
+            search_data = key;
+            #1; 
+
+            expected_match = compute_match(key);
+
+            if (match !== expected_match) begin
+                error_flag = 1;
+                $display("---- ERROR! --- search_data = %h || expected = %b || got = %b", key, expected_match, match);
             end
         end
     endtask
 
-    // --------------------------------------------------
-    // Directed tests
-    // --------------------------------------------------
+
     initial begin
-        $display("=== TCAM TESTBENCH START ===");
+        $dumpfile("tcam.vcd");
+        $dumpvars(0, tcam_tb);
+
+        $display("========= TCAM TEST START =========");
 
         // Initialize
+        reset = 1;
+        error_flag = 0;
+        write_enable = 0;
+        search_data  = 0;
         for (i = 0; i < DEPTH; i = i + 1) begin
-            value[i] = '0;
-            mask[i]  = '0;
+            ref_value[i] = 0;
+            ref_mask [i] = 0;
         end
-        search_data = '0;
         #10;
 
-        // Test 1: Exact match
-        value[0] = 16'hA55A;
-        mask[0]  = 16'h0000; // no X
-        search_data = 16'hA55A;
-        compute_expected();
-        #1;
-        if (match !== expected_match)
-            $fatal("ERROR: Exact match failed");
-        else
-            $display("PASS: Exact match");
+        reset = 0;
+        @(posedge clk);
 
-        // Test 2: Masked match
-        value[1] = 16'b0110_1100_1010_1111;
-        mask[1]  = 16'b0000_1111_0000_1111; // X bits
-        search_data = 16'b0110_0000_1010_0000;
-        compute_expected();
-        #1;
-        if (match !== expected_match)
-            $fatal("ERROR: Masked match failed");
-        else
-            $display("PASS: Masked match");
+        // Directed tests
+        $display("Running directed tests...");
+        write_entry(0, 16'hA55A, 16'h0000); // exact
+        write_entry(1, 16'h0F0F, 16'h00FF); // masked
+        write_entry(3, 16'h0A12, 16'h0FFF); // masked
+        write_entry(2, 16'hFFFF, 16'h0000); // exact
+        write_entry(4, 16'h1234, 16'h1000); // masked
 
-        // Test 3: Guaranteed mismatch
-        value[2] = 16'hFFFF;
-        mask[2]  = 16'h0000;
-        search_data = 16'h0000;
-        compute_expected();
-        #1;
-        if (match !== expected_match)
-            $fatal("ERROR: Mismatch test failed");
-        else
-            $display("PASS: Mismatch");
+        check_search(16'hA55A);
+        check_search(16'h0F55);
+        check_search(16'h0000);
+        check_search(16'h1234);
 
-        // --------------------------------------------------
+
         // Random tests
-        // --------------------------------------------------
         $display("Running random tests...");
-        for (test = 0; test < 200; test = test + 1) begin
+        for (test = 0; test < 300; test = test + 1) begin
             for (i = 0; i < DEPTH; i = i + 1) begin
-                value[i] = $random;
-                mask[i]  = $random; // random X locations
+                write_entry(i, $random, $random);
             end
-
-            search_data = $random;
-
-            compute_expected();
-            #1;
-
-            if (match !== expected_match) begin
-                $display("FAIL at random test %0d", test);
-                $display("search_data = %h", search_data);
-                for (i = 0; i < DEPTH; i = i + 1) begin
-                    $display("Entry %0d: value=%h mask=%h match=%b exp=%b",
-                             i, value[i], mask[i], match[i], expected_match[i]);
-                end
-                $fatal;
-            end
+            check_search($random);
         end
 
-        $display("=== ALL TCAM TESTS PASSED SUCCESSFULLY ===");
+        // Final result
+        if (error_flag) begin
+            $display("========= TCAM TEST FAILED =========");
+            $finish;
+        end else begin
+            $display("========= ALL TCAM TESTS PASSED =========");
+        end
+
         $finish;
     end
 
