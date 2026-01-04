@@ -80,6 +80,8 @@ module complex_number_ALU(
             start_addsub <= 0;
             start_mul <= 0;
             done <= 0;
+
+            
         end else begin
             case (state)
 
