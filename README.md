@@ -1,9 +1,9 @@
 # Digital System Design (DSD) Laboratory Coursework
 
-[![Verilog](https://img.shields.io/badge/Verilog-5555FF?style=for-the-badge&logo=verilog&logoColor=white)](https://en.wikipedia.org/wiki/Verilog)
-[![Quartus](https://img.shields.io/badge/Quartus-0078D4?style=for-the-badge&logo=intel&logoColor=white)](https://www.intel.com/content/www/us/en/software/programmable/quartus-prime/overview.html)
-[![FPGA](https://img.shields.io/badge/FPGA-FF6B00?style=for-the-badge&logo=amd&logoColor=white)](https://en.wikipedia.org/wiki/Field-programmable_gate_array)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![Verilog](https://img.shields.io/badge/Verilog-5555FF?logo=verilog&logoColor=white)](https://en.wikipedia.org/wiki/Verilog)
+[![Quartus](https://img.shields.io/badge/Quartus-0078D4?logo=intel&logoColor=white)](https://www.intel.com/content/www/us/en/software/programmable/quartus-prime/overview.html)
+[![FPGA](https://img.shields.io/badge/FPGA-FF6B00?logo=amd&logoColor=white)](https://en.wikipedia.org/wiki/Field-programmable_gate_array)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 
 ## 📖 Overview
